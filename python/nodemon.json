@@ -1,0 +1,6 @@
+{
+    "verbose": true, 
+    "ext": "py", 
+    "exec": "python3 -u main.py || exit 1",
+    "signal": "SIGTERM" 
+}
