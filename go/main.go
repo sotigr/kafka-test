@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,13 @@ func onMessage(msg *kafka.Message, err error) {
 }
 
 func main() {
+	cn := 0
+	wk := NewLoopWorker(2*time.Second, func(lw *LoopWorker) {
+		cn += 1
+		fmt.Println("working", cn)
+	})
+	defer wk.Stop()
+
 	topic := "myTopic"
 
 	// CONSUMER EXAMPLE
@@ -53,6 +61,31 @@ func main() {
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
+		})
+	})
+
+	r.GET("/start", func(c *gin.Context) {
+		wk.Start(false)
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+		})
+	})
+	r.GET("/pause", func(c *gin.Context) {
+		wk.Pause()
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+		})
+	})
+	r.GET("/resume", func(c *gin.Context) {
+		wk.Resume()
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+		})
+	})
+	r.GET("/stop", func(c *gin.Context) {
+		wk.Stop()
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
 		})
 	})
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
