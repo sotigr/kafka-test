@@ -6,19 +6,14 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-type ConsumerWorker interface {
-	Start()
-	Stop()
-}
-
 type worker struct {
 	running bool
 	c       *kafka.Consumer
 	cb      func(*kafka.Message, error)
 }
 
-func NewConsumerWorker(onMessage func(*kafka.Message, error), servers string, groupId string, instanceId string, topic string) (ConsumerWorker, error) {
-	var cw ConsumerWorker
+func NewConsumerWorker(onMessage func(*kafka.Message, error), servers string, groupId string, instanceId string, topic string) (Loop, error) {
+	var cw Loop
 
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": servers,
@@ -38,18 +33,27 @@ func NewConsumerWorker(onMessage func(*kafka.Message, error), servers string, gr
 	return cw, err
 }
 
-func (w worker) Start() {
+func (w worker) Start(block bool) {
 	if w.running {
 		return
 	}
 	w.running = true
-	go func() {
+	if block {
 		for w.running {
 			msg, err := w.c.ReadMessage(time.Second)
 			w.cb(msg, err)
 		}
 		w.c.Close()
-	}()
+	} else {
+		go func() {
+			for w.running {
+				msg, err := w.c.ReadMessage(time.Second)
+				w.cb(msg, err)
+			}
+			w.c.Close()
+		}()
+	}
+
 }
 
 func (w worker) Stop() {

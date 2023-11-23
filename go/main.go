@@ -22,7 +22,7 @@ func onMessage(msg *kafka.Message, err error) {
 
 func main() {
 	cn := 0
-	wk := NewLoopWorker(2*time.Second, func(lw *LoopWorker) {
+	wk := NewLoopWorker(2*time.Second, func(lw LoopResumable) {
 		cn += 1
 		fmt.Println("working", cn)
 	})
@@ -37,7 +37,7 @@ func main() {
 		panic(err)
 	}
 
-	c1.Start()
+	c1.Start(false)
 
 	// PUBLISHER EXAMPLE
 	r := gin.Default()

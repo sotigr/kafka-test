@@ -5,26 +5,31 @@ import (
 	"time"
 )
 
-type WorkLoop interface {
-	startWork()
+type Loop interface {
 	Start(block bool)
 	Stop()
+}
+
+type LoopResumable interface {
+	Start(block bool)
+	Stop()
+	Pause()
 	Resume()
 }
 
-type LoopWorker struct {
+type WorkLoop struct {
 	running  bool
 	paused   bool
 	interval time.Duration
-	cb       func(*LoopWorker)
+	cb       func(LoopResumable)
 	mu       sync.Mutex
 }
 
-func NewLoopWorker(interval time.Duration, cb func(*LoopWorker)) *LoopWorker {
-	return &LoopWorker{running: false, paused: false, interval: interval, cb: cb}
+func NewLoopWorker(interval time.Duration, cb func(LoopResumable)) *WorkLoop {
+	return &WorkLoop{running: false, paused: false, interval: interval, cb: cb}
 }
 
-func (w *LoopWorker) startWork() {
+func (w *WorkLoop) startWork() {
 	if w.running == false {
 		return
 	}
@@ -41,7 +46,7 @@ func (w *LoopWorker) startWork() {
 	}
 }
 
-func (w *LoopWorker) Start(block bool) {
+func (w *WorkLoop) Start(block bool) {
 	if w.running {
 		return
 	}
@@ -64,20 +69,20 @@ func (w *LoopWorker) Start(block bool) {
 
 }
 
-func (w *LoopWorker) Stop() {
+func (w *WorkLoop) Stop() {
 	w.mu.Lock()
 	w.paused = true
 	w.running = false
 	w.mu.Unlock()
 }
 
-func (w *LoopWorker) Pause() {
+func (w *WorkLoop) Pause() {
 	w.mu.Lock()
 	w.paused = true
 	w.mu.Unlock()
 }
 
-func (w *LoopWorker) Resume() {
+func (w *WorkLoop) Resume() {
 	if w.paused && w.running {
 		go w.startWork()
 	}
