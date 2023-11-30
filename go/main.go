@@ -2,36 +2,41 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/gin-gonic/gin"
 )
 
 func onMessage(msg *kafka.Message, err error) {
 	if err == nil {
-		fmt.Println(string(msg.Value))
-	} else if !err.(kafka.Error).IsTimeout() {
+		fmt.Println(string(msg.Value), rand.Intn(50))
+	} else if err.(kafka.Error).IsFatal() {
 		// The client will automatically try to recover from all errors.
 		// Timeout is not considered an error because it is raised by
 		// ReadMessage in absence of messages.
-		fmt.Println("Consumer error:", err, msg)
+		fmt.Println("Consumer error:", err)
 	}
 }
 
 func main() {
 	cn := 0
-	wk := NewLoopWorker(2*time.Second, func(lw LoopResumable) {
+	wk := NewResumableLoop(2*time.Second, func(lw LoopResumable) {
 		cn += 1
 		fmt.Println("working", cn)
 	})
+
 	defer wk.Stop()
 
 	topic := "myTopic"
 
 	// CONSUMER EXAMPLE
-	c1, err := NewConsumerWorker(onMessage, "kafka", "myGroup", "c", topic)
+	c1, err := NewConsumerLoop(onMessage, "kafka", "myGroup", "c", []string{topic})
+
+	c1.SetMaxTasks(3)
+	c1.SetTaskDelay(1 * time.Second)
 
 	if err != nil {
 		panic(err)
@@ -52,12 +57,15 @@ func main() {
 			return
 		}
 
-		p.Produce(&kafka.Message{
-			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-			Value:          []byte("very special message"),
-		}, nil)
+		for i := 0; i < 20; i++ {
+			p.Produce(&kafka.Message{
+				TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+				Value:          []byte("very special message"),
+			}, nil)
+		}
+
 		// Wait for message deliveries before shutting down
-		p.Flush(15 * 1000)
+		// p.Flush(15 * 1000)
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
