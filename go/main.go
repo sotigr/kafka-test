@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 
 func onMessage(msg *kafka.Message, err error) {
 	if err == nil {
-		fmt.Println(string(msg.Value), rand.Intn(50))
+		// fmt.Println(string(msg.Value), rand.Intn(50))
 	} else if err.(kafka.Error).IsFatal() {
 		// The client will automatically try to recover from all errors.
 		// Timeout is not considered an error because it is raised by
@@ -35,7 +34,7 @@ func main() {
 	// CONSUMER EXAMPLE
 	c1, err := NewConsumerLoop(onMessage, "kafka", "myGroup", "c", []string{topic})
 
-	c1.SetMaxTasks(3)
+	// c1.SetMaxTasks(3)
 	c1.SetTaskDelay(1 * time.Second)
 
 	if err != nil {
